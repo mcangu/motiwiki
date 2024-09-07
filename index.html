@@ -52,7 +52,7 @@
           <img src="logomotiwiki.png" alt="Logo" class="logo" />
         </div>
         <div class="col s10 center-align">
-          <h4>Motipedia</h4>
+          <h4>MotiPedia</h4>
         </div>
       </div>
 
@@ -109,8 +109,20 @@
       $(document).ready(function () {
         $(".tabs").tabs();
 
-        // Función de búsqueda
+        // Función para buscar al hacer clic en el botón o presionar "Enter"
         $("#search-button").click(function () {
+          iniciarBusqueda();
+        });
+
+        $("#search-query").keypress(function (event) {
+          if (event.which === 13) {
+            // Detectar la tecla "Enter"
+            iniciarBusqueda();
+          }
+        });
+
+        // Función que inicia la búsqueda
+        function iniciarBusqueda() {
           let query = $("#search-query").val();
 
           // Limpiar resultados anteriores
@@ -121,7 +133,7 @@
           } else {
             M.toast({ html: "Por favor, ingresa una búsqueda" });
           }
-        });
+        }
 
         // Función para buscar en Wikipedia
         function buscarEnWikipedia(query) {
