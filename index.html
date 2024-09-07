@@ -118,6 +118,7 @@
           if (event.which === 13) {
             // Detectar la tecla "Enter"
             iniciarBusqueda();
+            $("#search-query").blur(); // Eliminar el enfoque para cerrar el teclado en móviles
           }
         });
 
