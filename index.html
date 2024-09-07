@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buscador de Wikipedia</title>
+    <!-- Importando Materialize CSS -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+      rel="stylesheet"
+    />
+    <!-- Iconos de Material Design -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding: 20px;
+      }
+      .tabs .tab a {
+        color: #0d47a1; /* Texto en azul oscuro */
+      }
+      .tabs .tab a:hover,
+      .tabs .tab a.active {
+        background-color: #a5d6a7; /* Color de fondo verde claro */
+        color: #1b5e20; /* Texto en verde oscuro */
+      }
+      .tabs .indicator {
+        background-color: #1b5e20; /* Indicador en verde oscuro */
+      }
+      .search-results {
+        margin-top: 20px;
+      }
+      .tab-content {
+        margin-top: 20px;
+      }
+      .logo {
+        max-height: 100px; /* Aumentando el tamaño máximo del logo */
+      }
+      .header-logo {
+        display: flex;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Encabezado con logo y título -->
+      <div class="row header-logo">
+        <div class="col s2">
+          <img src="logomotiwiki.png" alt="Logo" class="logo" />
+        </div>
+        <div class="col s10 center-align">
+          <h4>Buscador de Wikipedia</h4>
+        </div>
+      </div>
+
+      <!-- Formulario de búsqueda -->
+      <div class="row">
+        <div class="input-field col s12">
+          <input
+            type="text"
+            id="search-query"
+            placeholder="Ingresa tu búsqueda"
+          />
+          <label for="search-query">Búsqueda</label>
+        </div>
+        <div class="col s12 center-align">
+          <button id="search-button" class="btn waves-effect waves-light">
+            Buscar
+            <i class="material-icons right">search</i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Resultados de búsqueda -->
+      <div class="row search-results" id="search-results">
+        <ul class="collection"></ul>
+      </div>
+
+      <!-- Pestaña de búsquedas guardadas -->
+      <div class="row">
+        <ul class="tabs">
+          <li class="tab col s6">
+            <a href="#results-tab" class="active">Resultados</a>
+          </li>
+          <li class="tab col s6">
+            <a href="#saved-tab">Búsquedas Guardadas</a>
+          </li>
+        </ul>
+      </div>
+
+      <div id="results-tab" class="tab-content">
+        <ul class="collection" id="live-results"></ul>
+      </div>
+
+      <div id="saved-tab" class="tab-content">
+        <ul class="collection" id="saved-results"></ul>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        $(".tabs").tabs();
+
+        // Función de búsqueda
+        $("#search-button").click(function () {
+          let query = $("#search-query").val();
+          if (query) {
+            buscarEnWikipedia(query);
+          } else {
+            M.toast({ html: "Por favor, ingresa una búsqueda" });
+          }
+        });
+
+        // Función para buscar en Wikipedia
+        function buscarEnWikipedia(query) {
+          let apiUrl = `https://es.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${query}`;
+
+          $.ajax({
+            url: apiUrl,
+            method: "GET",
+            success: function (response) {
+              response.query.search.forEach((result) => {
+                obtenerExtracto(result.title);
+              });
+            },
+            error: function () {
+              M.toast({ html: "Error al buscar en Wikipedia" });
+            },
+          });
+        }
+
+        // Función para obtener un extracto ampliado
+        function obtenerExtracto(titulo) {
+          let apiUrl = `https://es.wikipedia.org/w/api.php?action=query&prop=extracts&format=json&exintro=&explaintext=&titles=${titulo}&origin=*`;
+
+          $.ajax({
+            url: apiUrl,
+            method: "GET",
+            success: function (response) {
+              let pages = response.query.pages;
+              for (let pageId in pages) {
+                if (pages.hasOwnProperty(pageId)) {
+                  let page = pages[pageId];
+                  mostrarResultadoAmpliado(page.title, page.extract);
+                }
+              }
+            },
+            error: function () {
+              M.toast({ html: "Error al obtener detalles del artículo" });
+            },
+          });
+        }
+
+        // Mostrar resultados de búsqueda ampliados
+        function mostrarResultadoAmpliado(title, extract) {
+          let liveResults = $("#live-results");
+          let listItem = $(`
+                    <li class="collection-item">
+                        <span class="title"><strong>${title}</strong></span>
+                        <p>${extract}</p>
+                        <a href="https://es.wikipedia.org/wiki/${title}" class="secondary-content">
+                            <i class="material-icons">open_in_new</i>
+                        </a>
+                        <button class="btn-small save-button" data-title="${title}" data-extract="${extract}">Guardar</button>
+                    </li>
+                `);
+          liveResults.append(listItem);
+
+          $(".save-button").click(function () {
+            guardarBusqueda($(this).data("title"), $(this).data("extract"));
+          });
+        }
+
+        // Guardar búsqueda
+        function guardarBusqueda(title, extract) {
+          let savedResults = $("#saved-results");
+          let listItem = $(`
+                    <li class="collection-item">
+                        <span class="title"><strong>${title}</strong></span>
+                        <p>${extract}</p>
+                        <a href="https://es.wikipedia.org/wiki/${title}" class="secondary-content">
+                            <i class="material-icons">open_in_new</i>
+                        </a>
+                        <a href="#!" class="delete-button"><i class="material-icons">delete</i></a>
+                        <a href="#!" class="pdf-button"><i class="material-icons">picture_as_pdf</i></a>
+                    </li>
+                `);
+          savedResults.append(listItem);
+
+          // Eliminar búsqueda guardada
+          listItem.find(".delete-button").click(function () {
+            $(this).parent().remove();
+          });
+
+          // Descargar PDF
+          listItem.find(".pdf-button").click(function () {
+            generarPDF(title, extract);
+          });
+        }
+
+        // Generar PDF
+        function generarPDF(title, extract) {
+          let content = `
+                    <h1>${title}</h1>
+                    <p>${extract}</p>
+                `;
+          let opt = {
+            margin: 1,
+            filename: `${title}.pdf`,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+          };
+          html2pdf().from(content).set(opt).save();
+        }
+      });
+    </script>
+  </body>
+</html>
