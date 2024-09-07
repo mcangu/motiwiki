@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Motipedia</title>
+    <title>MotiPedia</title>
     <!-- Importando Materialize CSS -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
@@ -49,10 +49,14 @@
       <!-- Encabezado con logo y título -->
       <div class="row header-logo">
         <div class="col s2">
-          <img src="logomotiwiki.png" alt="Logo" class="logo" />
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Wikipedia-logo-v2.svg/200px-Wikipedia-logo-v2.svg.png"
+            alt="Logo"
+            class="logo"
+          />
         </div>
         <div class="col s10 center-align">
-          <h4>MotiPedia</h4>
+          <h4>Motipedia</h4>
         </div>
       </div>
 
@@ -76,7 +80,7 @@
 
       <!-- Resultados de búsqueda -->
       <div class="row search-results" id="search-results">
-        <ul class="collection"></ul>
+        <ul class="collection" id="live-results"></ul>
       </div>
 
       <!-- Pestaña de búsquedas guardadas -->
@@ -112,6 +116,10 @@
         // Función de búsqueda
         $("#search-button").click(function () {
           let query = $("#search-query").val();
+
+          // Limpiar resultados anteriores
+          $("#live-results").empty();
+
           if (query) {
             buscarEnWikipedia(query);
           } else {
