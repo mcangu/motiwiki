@@ -225,19 +225,11 @@
           });
         }
 
-        // Guardar búsqueda (evitar duplicados)
+        // Guardar búsqueda
         function guardarBusqueda(title, extract) {
-          // Verificar si el artículo ya está guardado
-          const yaGuardado = savedResults.some(
-            (result) => result.title === title
-          );
-          if (!yaGuardado) {
-            savedResults.push({ title, extract });
-            localStorage.setItem("savedResults", JSON.stringify(savedResults));
-            renderSavedResults(); // Renderizar los resultados guardados
-          } else {
-            M.toast({ html: "Artículo guardado" });
-          }
+          savedResults.push({ title, extract });
+          localStorage.setItem("savedResults", JSON.stringify(savedResults));
+          renderSavedResults(); // Renderizar los resultados guardados
         }
 
         // Renderizar los resultados guardados en el tab "Guardados"
