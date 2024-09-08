@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MotiPedia</title>
+    <title>MotiWikipedia</title>
     <!-- Importando Materialize CSS -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
@@ -42,6 +42,17 @@
         display: flex;
         align-items: center;
       }
+      .icon-buttons i {
+        cursor: pointer;
+        margin-right: 10px;
+      }
+      /* Estilo para la advertencia de "No se encontraron resultados" */
+      .no-results {
+        text-align: center;
+        color: red;
+        font-size: 18px;
+        margin-top: 20px;
+      }
     </style>
   </head>
   <body>
@@ -52,7 +63,7 @@
           <img src="logomotiwiki.png" alt="Logo" class="logo" />
         </div>
         <div class="col s10 center-align">
-          <h4>MotiPedia</h4>
+          <h4>MotiWikipedia</h4>
         </div>
       </div>
 
@@ -77,6 +88,10 @@
       <!-- Resultados de búsqueda -->
       <div class="row search-results" id="search-results">
         <ul class="collection" id="live-results"></ul>
+        <!-- Contenedor para el mensaje de "No se encontraron resultados" -->
+        <p id="no-results-message" class="no-results" style="display: none">
+          No se encontraron resultados
+        </p>
       </div>
 
       <!-- Pestaña de búsquedas guardadas -->
@@ -85,9 +100,7 @@
           <li class="tab col s6">
             <a href="#results-tab" class="active">Resultados</a>
           </li>
-          <li class="tab col s6">
-            <a href="#saved-tab">Búsquedas Guardadas</a>
-          </li>
+          <li class="tab col s6"><a href="#saved-tab">Guardados</a></li>
         </ul>
       </div>
 
@@ -109,6 +122,13 @@
       $(document).ready(function () {
         $(".tabs").tabs();
 
+        // Almacenamos los resultados guardados en localStorage
+        let savedResults =
+          JSON.parse(localStorage.getItem("savedResults")) || [];
+
+        // Cargar los resultados guardados desde localStorage
+        renderSavedResults();
+
         // Función para buscar al hacer clic en el botón o presionar "Enter"
         $("#search-button").click(function () {
           iniciarBusqueda();
@@ -126,8 +146,9 @@
         function iniciarBusqueda() {
           let query = $("#search-query").val();
 
-          // Limpiar resultados anteriores
+          // Limpiar resultados anteriores y ocultar el mensaje de "No se encontraron resultados"
           $("#live-results").empty();
+          $("#no-results-message").hide();
 
           if (query) {
             buscarEnWikipedia(query);
@@ -144,9 +165,16 @@
             url: apiUrl,
             method: "GET",
             success: function (response) {
-              response.query.search.forEach((result) => {
-                obtenerExtracto(result.title);
-              });
+              if (response.query.search.length === 0) {
+                // Mostrar mensaje de "No se encontraron resultados"
+                $("#no-results-message").show();
+              } else {
+                // Ocultar el mensaje en caso de que haya resultados
+                $("#no-results-message").hide();
+                response.query.search.forEach((result) => {
+                  obtenerExtracto(result.title);
+                });
+              }
             },
             error: function () {
               M.toast({ html: "Error al buscar en Wikipedia" });
@@ -191,35 +219,57 @@
                 `);
           liveResults.append(listItem);
 
+          // Guardar el resultado al hacer clic en el botón "Guardar"
           $(".save-button").click(function () {
             guardarBusqueda($(this).data("title"), $(this).data("extract"));
           });
         }
 
-        // Guardar búsqueda
+        // Guardar búsqueda (evitar duplicados)
         function guardarBusqueda(title, extract) {
-          let savedResults = $("#saved-results");
-          let listItem = $(`
-                    <li class="collection-item">
-                        <span class="title"><strong>${title}</strong></span>
-                        <p>${extract}</p>
-                        <a href="https://es.wikipedia.org/wiki/${title}" class="secondary-content">
-                            <i class="material-icons">open_in_new</i>
-                        </a>
-                        <a href="#!" class="delete-button"><i class="material-icons">delete</i></a>
-                        <a href="#!" class="pdf-button"><i class="material-icons">picture_as_pdf</i></a>
-                    </li>
-                `);
-          savedResults.append(listItem);
+          // Verificar si el artículo ya está guardado
+          const yaGuardado = savedResults.some(
+            (result) => result.title === title
+          );
+          if (!yaGuardado) {
+            savedResults.push({ title, extract });
+            localStorage.setItem("savedResults", JSON.stringify(savedResults));
+            renderSavedResults(); // Renderizar los resultados guardados
+          } else {
+            M.toast({ html: "Artículo guardado" });
+          }
+        }
 
-          // Eliminar búsqueda guardada
-          listItem.find(".delete-button").click(function () {
-            $(this).parent().remove();
+        // Renderizar los resultados guardados en el tab "Guardados"
+        function renderSavedResults() {
+          let savedResultsContainer = $("#saved-results");
+          savedResultsContainer.empty(); // Limpiar la lista antes de mostrar los resultados guardados
+
+          savedResults.forEach((result, index) => {
+            let listItem = $(`
+                        <li class="collection-item">
+                            <span class="title"><strong>${result.title}</strong></span>
+                            <p>${result.extract}</p>
+                            <div class="icon-buttons">
+                                <i class="material-icons delete-button" data-index="${index}">delete</i>
+                                <i class="material-icons pdf-button" data-title="${result.title}" data-extract="${result.extract}">picture_as_pdf</i>
+                            </div>
+                        </li>
+                    `);
+            savedResultsContainer.append(listItem);
           });
 
-          // Descargar PDF
-          listItem.find(".pdf-button").click(function () {
-            generarPDF(title, extract);
+          // Eliminar búsqueda guardada
+          $(".delete-button").click(function () {
+            const index = $(this).data("index");
+            savedResults.splice(index, 1); // Eliminar el elemento del array
+            localStorage.setItem("savedResults", JSON.stringify(savedResults)); // Actualizar localStorage
+            renderSavedResults(); // Volver a renderizar
+          });
+
+          // Descargar búsqueda en PDF
+          $(".pdf-button").click(function () {
+            generarPDF($(this).data("title"), $(this).data("extract"));
           });
         }
 
